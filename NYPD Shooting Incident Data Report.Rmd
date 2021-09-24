@@ -1,0 +1,106 @@
+---
+title: "NYPD Shooting Incident Data Report"
+author: "Venkata Kasireddy"
+date: "9/13/2021"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+library(ggplot2)
+library(dplyr)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## R Markdown
+
+#install tidyverse Package -- library(tidyverse)
+```{r}
+library(tidyverse)
+```
+
+#Read the data from DATA.Gov, NYPD Shooting Incident Data Report into uid_ny object
+```{r}
+uid_ny <- read_csv("https://data.cityofnewyork.us/api/views/5ucz-vwe8/rows.csv?accessType=DOWNLOAD")
+```
+#removing some columns from data that is not needed for the analysis
+```{r}
+uid_ny <- uid_ny %>% select (-c(OCCUR_TIME,PRECINCT,JURISDICTION_CODE,LOCATION_DESC,STATISTICAL_MURDER_FLAG,X_COORD_CD,Y_COORD_CD,Latitude,Longitude,`New Georeferenced Column` ))
+```
+#filtering rows where data is not avialable
+```{r}
+uid_ny <- uid_ny %>%  filter_at(vars(starts_with("PERP_")), any_vars(! is.na(.)))
+```
+#library(lubridate) -- to convert data char column to date object use the lubridate function
+```{r}
+library(lubridate)
+```
+#conevrt OCCUR_DATE (char) to occur_data (date object)
+
+```{r}
+uid_ny <- uid_ny %>% mutate( occur_date = mdy( OCCUR_DATE ) )
+
+```
+#remove chr OCCUR_DATE from uid_ny object
+
+```{r}
+uid_ny <- uid_ny %>% select (-c(OCCUR_DATE))
+```
+# Analysis -1 
+
+#daily cases
+```{r}
+daily_cases <- uid_ny %>% count(occur_date)
+```
+
+#linear model (prediction/estimation number of cases per day based on history)
+```{r}
+mod1 <- lm(n ~ occur_date,data = daily_cases)
+```
+#dispaly statstical details of model
+```{r}
+summary(mod1)
+```
+#add new coloumn of est (estimate/prediction)
+```{r}
+daily_cases %>% mutate(est = predict(mod1))
+```
+
+#plot x axis as 'time', y axis number of shooting incidents, blue color as history, red color as estimate of linear #model   
+```{r}
+daily_cases %>% ggplot() + geom_point(aes(x = occur_date, y = n),color = "blue") + geom_point(aes(x = occur_date, y = predict(mod1)),color = "red") + labs(x = "Date",y = "shooting incidents",title = "NYPD shooting incidents",)
+```
+
+#Complete code to run above plot --- 
+#daily_cases %>% ggplot() + geom_point(aes(x = occur_date, y = n),color = "blue") + geom_point(aes(x = occur_date, y = predict(mod1)),color = "red") + labs(x = "Date",y = "shooting incidents",title = "NYPD shooting incidents",)
+
+
+
+
+
+# Analysis - 2 
+#count by location (area wise with in new york)
+```{r}
+Location_count <- uid_ny %>% count(BORO)
+
+Location_count
+```
+
+
+#Based on above data, Bronx and Brooklyn have highest number of incidents hence top two unsafe places where as #Staten Island is lowest cases hence safe place.
+
+
+
+
+
+
+
+
+
+
+
+
+
